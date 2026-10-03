@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Offene Geisternetze - Shea Shepherd</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+
+    <h1 class="mb-4">Offene Geisternetze</h1>
+
+    <!-- Erfolgs- und Fehlermeldungen (Flash-Attribute) -->
+    <div th:if="${erfolg}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${erfolg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+    </div>
+    <div th:if="${fehler}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${fehler}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+    </div>
+
+    <div class="mb-3">
+        <a th:href="@{/netze/neu}" class="btn btn-primary">+ Neues Geisternetz melden</a>
+    </div>
+
+    <table class="table table-bordered table-striped align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Breitengrad</th>
+                <th>Längengrad</th>
+                <th>Größe (m²)</th>
+                <th>Status</th>
+                <th>Meldende Person</th>
+                <th>Bergende Person</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="n : ${netze}">
+                <td th:text="${n.id}">1</td>
+                <td th:text="${n.latitude}">54.32</td>
+                <td th:text="${n.longitude}">10.12</td>
+                <td th:text="${n.groesse}">15.0</td>
+                <td>
+                    <span th:text="${n.status}" 
+                          th:classappend="${n.status.name() == 'GEMELDET' ? 'badge bg-info text-dark' : 'badge bg-warning text-dark'}">
+                        GEMELDET
+                    </span>
+                </td>
+                <td th:text="${n.meldendePerson != null && n.meldendePerson.name != null && !n.meldendePerson.name.isBlank() ? n.meldendePerson.name : 'Anonym'}">
+                    Anonym
+                </td>
+                <td th:text="${n.bergendePerson != null && n.bergendePerson.name != null && !n.bergendePerson.name.isBlank() ? n.bergendePerson.name : '-'}">
+                    -
+                </td>
+                <td>
+                    <!-- Aktion bei Status GEMELDET: Bergung übernehmen -->
+                    <div th:if="${n.status.name() == 'GEMELDET'}" class="mb-2">
+                        <form th:action="@{/netze/bergung/{id}(id=${n.id})}" method="post" class="row g-2 align-items-center">
+                            <div class="col-auto">
+                                <input type="text" name="name" class="form-control form-control-sm" placeholder="Name" required />
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" name="telefonnummer" class="form-control form-control-sm" placeholder="Telefon" required />
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-success">Für Bergung eintragen</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Aktion bei Status BERGUNG_BEVORSTEHEND: Als geborgen markieren -->
+                    <div th:if="${n.status.name() == 'BERGUNG_BEVORSTEHEND'}" class="mb-2">
+                        <form th:action="@{/netze/geborgen/{id}(id=${n.id})}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-warning">Als geborgen markieren</button>
+                        </form>
+                    </div>
+
+                    <!-- Aktion für alle offenen Netze: Verschollen melden (mit Namenspflicht) -->
+                    <div>
+                        <form th:action="@{/netze/verschollen/{id}(id=${n.id})}" method="post" class="row g-2 align-items-center">
+                            <div class="col-auto">
+                                <input type="text" name="name" class="form-control form-control-sm" placeholder="Name für Meldung" required />
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" name="telefonnummer" class="form-control form-control-sm" placeholder="Telefon" required />
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-danger">Verschollen melden</button>
+                            </div>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(netze)}">
+                <td colspan="8" class="text-center text-muted">Keine offenen Geisternetze vorhanden.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.bundle.min.js"></script>
+</body>
+</html>

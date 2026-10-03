@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Geisternetz erfassen</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: inline-block; width: 150px; }
+        input[type="text"], input[type="number"] { width: 200px; padding: 5px; }
+        .error { color: red; font-size: 0.9em; display: block; }
+    </style>
+</head>
+<body>
+
+    <h1>Neues Geisternetz erfassen</h1>
+
+    <form th:action="@{/netze/speichern}" method="post">
+
+        <h3>1. Netzdaten</h3>
+        <div class="form-group">
+            <label for="latitude">Breitengrad (-90 bis 90):</label>
+            <input type="number" step="any" id="latitude" th:field="${geisternetz.latitude}" required />
+            <span class="error" th:if="${#fields.hasErrors('geisternetz.latitude')}" th:errors="${geisternetz.latitude}"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="longitude">Längengrad (-180 bis 180):</label>
+            <input type="number" step="any" id="longitude" th:field="${geisternetz.longitude}" required />
+            <span class="error" th:if="${#fields.hasErrors('geisternetz.longitude')}" th:errors="${geisternetz.longitude}"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="groesse">Geschätzte Größe (m²):</label>
+            <input type="number" step="any" id="groesse" th:field="${geisternetz.groesse}" required />
+            <span class="error" th:if="${#fields.hasErrors('geisternetz.groesse')}" th:errors="${geisternetz.groesse}"></span>
+        </div>
+
+        <h3>2. Kontaktdaten (Optional - leer lassen für anonyme Meldung)</h3>
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" th:field="${person.name}" />
+        </div>
+
+        <div class="form-group">
+            <label for="telefonnummer">Telefonnummer:</label>
+            <input type="text" id="telefonnummer" name="telefonnummer" th:field="${person.telefonnummer}" />
+        </div>
+
+        <button type="submit">Meldung absenden</button>
+        <a href="/netze">Abbrechen</a>
+    </form>
+
+</body>
+</html>

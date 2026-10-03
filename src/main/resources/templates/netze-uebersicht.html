@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Geisternetze - Übersicht</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .alert-erfolg { color: green; font-weight: bold; margin-bottom: 10px; }
+        .alert-fehler { color: red; font-weight: bold; margin-bottom: 10px; }
+        .action-form { display: inline-block; margin-right: 5px; }
+        input[type="text"] { padding: 4px; margin-right: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>Offene Geisternetze</h1>
+
+    <div th:if="${erfolg}" class="alert-erfolg" th:text="${erfolg}"></div>
+    <div th:if="${fehler}" class="alert-fehler" th:text="${fehler}"></div>
+
+    <p><a href="/netze/erfassen">+ Neues Geisternetz melden</a></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Breitengrad</th>
+                <th>Längengrad</th>
+                <th>Größe (m²)</th>
+                <th>Status</th>
+                <th>Meldende Person</th>
+                <th>Bergende Person</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="netz : ${netze}">
+                <td th:text="${netz.id}">1</td>
+                <td th:text="${netz.latitude}">54.1234</td>
+                <td th:text="${netz.longitude}">10.5678</td>
+                <td th:text="${netz.groesse}">20.0</td>
+                <td th:text="${netz.status}">GEMELDET</td>
+                <td th:text="${netz.meldendePerson != null ? netz.meldendePerson.name : 'Anonym'}">Anonym</td>
+                <td th:text="${netz.bergendePerson != null ? netz.bergendePerson.name : '-'}">-</td>
+                <td>
+                    <!-- Für Bergung eintragen (wenn Status GEMELDET) -->
+                    <form th:if="${netz.status.name() == 'GEMELDET'}" 
+                          th:action="@{/netze/bergung/{id}(id=${netz.id})}" 
+                          method="post" class="action-form">
+                        <input type="text" name="name" placeholder="Name" required />
+                        <input type="text" name="telefonnummer" placeholder="Telefon" required />
+                        <button type="submit">Für Bergung eintragen</button>
+                    </form>
+
+                    <!-- Als verschollen melden -->
+                    <form th:action="@{/netze/verschollen/{id}(id=${netz.id})}" 
+                          method="post" class="action-form">
+                        <button type="submit">Als verschollen melden</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>
