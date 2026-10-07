@@ -72,10 +72,41 @@
 
                     <!-- Aktion bei Status BERGUNG_BEVORSTEHEND: Als geborgen markieren -->
                     <div th:if="${n.status.name() == 'BERGUNG_BEVORSTEHEND'}" class="mb-2">
-                        <form th:action="@{/netze/geborgen/{id}(id=${n.id})}" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-warning">Als geborgen markieren</button>
-                        </form>
-                    </div>
+    <form th:action="@{/netze/geborgen/{id}(id=${n.id})}"
+          method="post"
+          class="row g-2 align-items-center">
+
+        <div class="col-auto">
+            <label class="visually-hidden" th:for="${'berger-name-' + n.id}">
+                Name der bergenden Person
+            </label>
+            <input type="text"
+                   th:id="${'berger-name-' + n.id}"
+                   name="name"
+                   class="form-control form-control-sm"
+                   placeholder="Name der bergenden Person"
+                   required>
+        </div>
+
+        <div class="col-auto">
+            <label class="visually-hidden" th:for="${'berger-telefon-' + n.id}">
+                Telefonnummer der bergenden Person
+            </label>
+            <input type="tel"
+                   th:id="${'berger-telefon-' + n.id}"
+                   name="telefonnummer"
+                   class="form-control form-control-sm"
+                   placeholder="Telefonnummer"
+                   required>
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-warning">
+                Als geborgen markieren
+            </button>
+        </div>
+    </form>
+</div>
 
                     <!-- Aktion für alle offenen Netze: Verschollen melden (mit Namenspflicht) -->
                     <div>

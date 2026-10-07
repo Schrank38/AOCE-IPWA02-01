@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional
 public class GeisternetzService {
 
     private final GeisternetzRepository geisternetzRepository;
@@ -22,88 +21,90 @@ public class GeisternetzService {
         this.personRepository = personRepository;
     }
 
-    /**
-     * Erfasst ein neues Geisternetz. Falls Name angegeben ist, wird die Person verknüpft, sonst anonym (null).
-     */
-    public Geisternetz erfasseNetz(Geisternetz netz, Person melder) {
-        if (melder != null && melder.getName() != null && !melder.getName().isBlank()) {
-            netz.setMeldendePerson(verarbeitePerson(melder));
-        } else {
-            netz.setMeldendePerson(null);
-        }
-        netz.setStatus(NetzStatus.GEMELDET);
-        return geisternetzRepository.save(netz);
-    }
-
-    /**
-     * Liefert alle noch zu bergenden oder angekündigten Netze für die Übersicht.
-     */
     @Transactional(readOnly = true)
     public List<Geisternetz> getOffeneNetze() {
         return geisternetzRepository.findByStatusIn(List.of(NetzStatus.GEMELDET, NetzStatus.BERGUNG_BEVORSTEHEND));
     }
 
-    /**
-     * Kündigt eine Bergung an und weist eine bergende Person zu (US-2).
-     */
+    // Die neue Methode, die Strings entgegennimmt, Kommas in Punkte umwandelt und abspeichert
+    @Transactional
+    public void erfasseNetzAlsString(String latitudeStr, String longitudeStr, String groesseStr, Person person) {
+        try {
+            Double lat = Double.valueOf(latitudeStr.trim().replace(',', '.'));
+            Double lon = Double.valueOf(longitudeStr.trim().replace(',', '.'));
+            Double groesse = Double.valueOf(groesseStr.trim().replace(',', '.'));
+
+            Geisternetz netz = new Geisternetz();
+            netz.setLatitude(lat);
+            netz.setLongitude(lon);
+            netz.setGroesse(groesse);
+            netz.setStatus(NetzStatus.GEMELDET);
+
+            // Anonymitäts-Check für die meldende Person
+            if (person != null && person.getName() != null && !person.getName().isBlank()) {
+                if (person.getTelefonnummer() == null || person.getTelefonnummer().isBlank()) {
+                    throw new IllegalArgumentException("Bei Angabe eines Namens ist die Telefonnummer zwingend erforderlich.");
+                }
+                Person persistiertePerson = personRepository.findByNameAndTelefonnummer(person.getName(), person.getTelefonnummer())
+                        .orElse(person);
+                netz.setMeldendePerson(persistiertePerson);
+            } else {
+                netz.setMeldendePerson(null);
+            }
+
+            geisternetzRepository.save(netz);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Bitte geben Sie gültige Zahlen für Koordinaten und Größe ein.");
+        }
+    }
+
+    @Transactional
     public void bergungAnkuendigen(Long netzId, Person berger) {
-        if (berger == null || berger.getName() == null || berger.getName().isBlank()) {
-            throw new IllegalArgumentException("Für eine Bergungsankündigung müssen Kontaktdaten (Name) angegeben werden.");
+        if (berger == null || berger.getName() == null || berger.getName().isBlank() || 
+            berger.getTelefonnummer() == null || berger.getTelefonnummer().isBlank()) {
+            throw new IllegalArgumentException("Für eine Bergung müssen Name und Telefonnummer zwingend angegeben werden.");
         }
         Geisternetz netz = geisternetzRepository.findById(netzId)
                 .orElseThrow(() -> new IllegalArgumentException("Geisternetz mit ID " + netzId + " nicht gefunden."));
-
         if (netz.getStatus() != NetzStatus.GEMELDET) {
-            throw new IllegalStateException("Nur Netze im Status 'GEMELDET' können zur Bergung übernommen werden.");
+            throw new IllegalStateException("Nur Netze im Status 'GEMELDET' können übernommen werden.");
         }
-
-        netz.setBergendePerson(verarbeitePerson(berger));
+        if (netz.getBergendePerson() != null) {
+            throw new IllegalStateException("Dieses Netz ist bereits einer bergenden Person zugeordnet.");
+        }
+        Person persistierterBerger = personRepository.findByNameAndTelefonnummer(berger.getName(), berger.getTelefonnummer())
+                .orElse(berger);
+        netz.setBergendePerson(persistierterBerger);
         netz.setStatus(NetzStatus.BERGUNG_BEVORSTEHEND);
         geisternetzRepository.save(netz);
     }
 
-    /**
-     * Markiert ein Netz als geborgen (US-4).
-     */
-    public void alsGeborgenMelden(Long netzId) {
+    @Transactional
+    public void alsGeborgenMelden(Long netzId, Person berger) {
         Geisternetz netz = geisternetzRepository.findById(netzId)
                 .orElseThrow(() -> new IllegalArgumentException("Geisternetz mit ID " + netzId + " nicht gefunden."));
-
         if (netz.getStatus() != NetzStatus.BERGUNG_BEVORSTEHEND) {
             throw new IllegalStateException("Nur Netze im Status 'BERGUNG_BEVORSTEHEND' können als geborgen gemeldet werden.");
         }
-
         netz.setStatus(NetzStatus.GEBORGEN);
         geisternetzRepository.save(netz);
     }
 
-    /**
-     * Markiert ein Netz als verschollen (US-7). Die meldende Person muss zwingend Kontaktdaten angeben.
-     */
+    @Transactional
     public void alsVerschollenMelden(Long netzId, Person hinweisgeber) {
-        if (hinweisgeber == null || hinweisgeber.getName() == null || hinweisgeber.getName().isBlank()) {
-            throw new IllegalArgumentException("Eine Verschollen-Meldung darf nicht anonym erfolgen. Bitte geben Sie Ihren Namen an.");
+        if (hinweisgeber == null || hinweisgeber.getName() == null || hinweisgeber.getName().isBlank() ||
+            hinweisgeber.getTelefonnummer() == null || hinweisgeber.getTelefonnummer().isBlank()) {
+            throw new IllegalArgumentException("Eine Verschollen-Meldung darf nicht anonym erfolgen. Bitte geben Sie Ihren Namen und eine Telefonnummer an.");
         }
         Geisternetz netz = geisternetzRepository.findById(netzId)
                 .orElseThrow(() -> new IllegalArgumentException("Geisternetz mit ID " + netzId + " nicht gefunden."));
-
         if (netz.getStatus() == NetzStatus.GEBORGEN || netz.getStatus() == NetzStatus.VERSCHOLLEN) {
             throw new IllegalStateException("Das Netz ist bereits abgeschlossen (geborgen oder verschollen).");
         }
-
-        // Anonymitätsregel erfüllt: Der Hinweisgeber hat seinen Namen angegeben
+        Person persistierterMelder = personRepository.findByNameAndTelefonnummer(hinweisgeber.getName(), hinweisgeber.getTelefonnummer())
+                .orElse(hinweisgeber);
+        netz.setVerschollenMelder(persistierterMelder);
         netz.setStatus(NetzStatus.VERSCHOLLEN);
         geisternetzRepository.save(netz);
-    }
-
-    /**
-     * Hilfsmethode zur Wiederverwendung bestehender Personen-Datensätze (Deduplizierung).
-     */
-    private Person verarbeitePerson(Person person) {
-        if (person == null || person.getName() == null || person.getName().isBlank()) {
-            return null;
-        }
-        return personRepository.findByNameAndTelefonnummer(person.getName(), person.getTelefonnummer())
-                .orElseGet(() -> personRepository.save(person));
     }
 }

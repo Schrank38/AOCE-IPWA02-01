@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+ghostnetdb.mv.db
+ghostnetdb.trace.db
